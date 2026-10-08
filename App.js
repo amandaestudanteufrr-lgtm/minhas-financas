@@ -1,105 +1,32 @@
-// App.js
-import { StatusBar } from 'expo-status-bar';
-import { ScrollView, View, Text, StyleSheet, SafeAreaView } from 'react-native';
-import { PaperProvider } from 'react-native-paper';
-import { CartaoSaldo } from './components/CartaoSaldo';
-import { CardsResumo } from './components/CardsResumo';
-import { ItemTransacao } from './components/ItemTransacao';
-import { cores, espacamento } from './theme';
+// App.js -> Arquivo principal onde o aplicativo inicia e decide qual tela mostrar primeiro
+import React, { useState } from 'react'; // Importa o React e o ganho useState para controlar estados (como saber se é o primeiro acesso)
+import { NavigationContainer } from '@react-navigation/native'; // Importa o container de navegação obrigatório do React Navigation
+import { SafeAreaProvider } from 'react-native-safe-area-context'; // Importa o provedor de áreas seguras para o aplicativo funcionar bem em qualquer celular
+import { TabRoutes } from './routes/TabRoutes'; // Importa o arquivo que agrupa todas as abas principais do app
+import { BoasVindasScreen } from './screens/BoasVindasScreen'; // Importa a tela de boas-vindas exibida no primeiro acesso
 
-// Dados estáticos para demonstração (na Aula 4, virão do AsyncStorage)
-const TRANSACOES = [
-  { id: '1', descricao: 'Salário', valor: 3200, tipo: 'receita', categoria: 'salario', data: '01/04/2026' },
-  { id: '2', descricao: 'Aluguel', valor: 900, tipo: 'despesa', categoria: 'moradia', data: '05/04/2026' },
-  { id: '3', descricao: 'Supermercado', valor: 280.50, tipo: 'despesa', categoria: 'alimentacao', data: '07/04/2026' },
-  { id: '4', descricao: 'Freelance', valor: 500, tipo: 'receita', categoria: 'salario', data: '10/04/2026' },
-  { id: '5', descricao: 'Uber', valor: 35.90, tipo: 'despesa', categoria: 'transporte', data: '11/04/2026' },
-  { id: '6', descricao: 'Academia', valor: 89.90, tipo: 'despesa', categoria: 'saude', data: '12/04/2026' },
-];
+export default function App() { // Cria e exporta o componente raiz (principal) do projeto
+  // Cria um estado 'primeiroAcesso' iniciado como true (verdadeiro) para saber se o usuário está abrindo o app pela primeira vez
+  const [primeiroAcesso, setPrimeiroAcesso] = useState(true);
 
-export default function App() {
-  // Calcula receitas, despesas e saldo
-  const receitas = TRANSACOES
-    .filter(t => t.tipo === 'receita')
-    .reduce((acc, t) => acc + t.valor, 0);
+  // Navegação condicional: Se for o primeiro acesso, mostra a tela de boas-vindas direto,
+  // sem precisar do container de navegação (já que ela é uma tela única, sem rotas)
+  if (primeiroAcesso) {
+    return (
+      <SafeAreaProvider>
+        {/* Renderiza a tela de boas-vindas e passa uma função que, ao ser concluída, muda o estado para false */}
+        <BoasVindasScreen onConcluir={() => setPrimeiroAcesso(false)} />
+      </SafeAreaProvider>
+    );
+  }
 
-  const despesas = TRANSACOES
-    .filter(t => t.tipo === 'despesa')
-    .reduce((acc, t) => acc + t.valor, 0);
-
-  const saldo = receitas - despesas;
-
+  // Se já passou das boas-vindas (primeiroAcesso virou false), renderiza o app normal com as abas e navegação
   return (
-    <PaperProvider>
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="light" />
-
-        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-          {/* Cabeçalho */}
-          <View style={styles.cabecalho}>
-            <Text style={styles.tituloCabecalho}>Minhas Finanças</Text>
-            <Text style={styles.subtituloCabecalho}>Abril 2026</Text>
-          </View>
-
-          {/* Card de saldo */}
-          <CartaoSaldo saldo={saldo} mes="Abril" />
-
-          {/* Cards de resumo */}
-          <CardsResumo receitas={receitas} despesas={despesas} />
-
-          {/* Lista de transações */}
-          <View style={styles.secao}>
-            <Text style={styles.tituloSecao}>Transações Recentes</Text>
-            {TRANSACOES.map(transacao => (
-              <ItemTransacao
-                key={transacao.id}
-                descricao={transacao.descricao}
-                valor={transacao.valor}
-                tipo={transacao.tipo}
-                categoria={transacao.categoria}
-                data={transacao.data}
-                onPress={() => console.log('Tocou em:', transacao.descricao)}
-              />
-            ))}
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </PaperProvider>
+    <SafeAreaProvider>
+      <NavigationContainer>
+        {/* Ativa o sistema de rotas por abas inferiores (Dashboard, Nova Transação, Relatório e Sobre) */}
+        <TabRoutes />
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: cores.primaria, // cor escura no topo (status bar area)
-  },
-  scroll: {
-    flex: 1,
-    backgroundColor: cores.fundo,
-  },
-  cabecalho: {
-    backgroundColor: cores.primaria,
-    paddingHorizontal: espacamento.md,
-    paddingVertical: espacamento.lg,
-  },
-  tituloCabecalho: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  subtituloCabecalho: {
-    color: '#bdc3c7',
-    fontSize: 14,
-    marginTop: 2,
-  },
-  secao: {
-    padding: espacamento.md,
-    marginTop: espacamento.sm,
-  },
-  tituloSecao: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: cores.texto,
-    marginBottom: espacamento.md,
-  },
-});
