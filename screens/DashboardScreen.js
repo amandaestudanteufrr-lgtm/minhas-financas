@@ -1,33 +1,24 @@
 // screens/DashboardScreen.js
 import React from 'react';
-import { ScrollView, View, Text, StyleSheet } from 'react-native';
+import {
+  ScrollView, View, Text, StyleSheet,
+  ActivityIndicator, Alert
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { setStatusBarStyle } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
 import { CartaoSaldo } from '../components/CartaoSaldo';
 import { CardsResumo } from '../components/CardsResumo';
+import { CartaoCotacoes } from '../components/CartaoCotacoes';   // ← NOVO
 import { ItemTransacao } from '../components/ItemTransacao';
+import { useTransacoes } from '../context/TransacoesContext';
 import { cores, espacamento } from '../theme';
 
-const TRANSACOES_INICIAIS = [
-  { id: '1', descricao: 'Salário', valor: 3200, tipo: 'receita', categoria: 'salario', data: '01/05/2026' },
-  { id: '2', descricao: 'Aluguel', valor: 900, tipo: 'despesa', categoria: 'moradia', data: '05/05/2026' },
-  { id: '3', descricao: 'Supermercado', valor: 280.50, tipo: 'despesa', categoria: 'alimentacao', data: '07/05/2026' },
-  { id: '4', descricao: 'Energia', valor: 400, tipo: 'despesa', categoria: 'moradia', data: '09/05/2026' },
-  { id: '5', descricao: 'Água', valor: 70.50, tipo: 'despesa', categoria: 'moradia', data: '10/05/2026' },
-];
-
 export function DashboardScreen({ navigation, route }) {
-  const [transacoes, setTransacoes] = React.useState(TRANSACOES_INICIAIS);
+  const { transacoes, saldo, receitas, despesas, carregando, removerTransacao } = useTransacoes();
 
-  // Recebe novas transações vindas da tela de formulário
-  React.useEffect(() => {
-    if (route.params?.novaTransacao) {
-      setTransacoes(prev => [route.params.novaTransacao, ...prev]);
-    }
-  }, [route.params?.novaTransacao]);
-
-  // Status bar claro enquanto o Dashboard está em foco (cabeçalho azul)
+  // Mantém o status bar claro enquanto o Dashboard está em foco (cabeçalho azul) — vindo da Aula 4
   useFocusEffect(
     React.useCallback(() => {
       setStatusBarStyle('light');
@@ -35,40 +26,73 @@ export function DashboardScreen({ navigation, route }) {
     }, [])
   );
 
-  const receitas = transacoes
-    .filter(t => t.tipo === 'receita')
-    .reduce((acc, t) => acc + t.valor, 0);
+  function confirmarExclusao(id, descricao) {
+    Alert.alert(
+      'Excluir transação',
+      `Deseja excluir "${descricao}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: () => removerTransacao(id) },
+      ]
+    );
+  }
 
-  const despesas = transacoes
-    .filter(t => t.tipo === 'despesa')
-    .reduce((acc, t) => acc + t.valor, 0);
+  // Tela de carregamento
+  if (carregando) {
+    return (
+      <View style={styles.centralizador}>
+        <ActivityIndicator size="large" color={cores.primaria} />
+        <Text style={styles.textoCarregando}>Carregando suas finanças...</Text>
+      </View>
+    );
+  }
 
+  // Renderiza o Dashboard: cabeçalho, cartão de saldo, resumo, cotações do dia e lista de transações
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.cabecalho}>
           <Text style={styles.titulo}>Minhas Finanças</Text>
-          <Text style={styles.subtitulo}>Maio 2026</Text>
+          <Text style={styles.subtitulo}>
+            {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+          </Text>
         </View>
 
-        <CartaoSaldo saldo={receitas - despesas} mes="Maio" />
+        <CartaoSaldo
+          saldo={saldo}
+          mes={new Date().toLocaleDateString('pt-BR', { month: 'long' })}
+        />
+
         <CardsResumo receitas={receitas} despesas={despesas} />
+
+        <CartaoCotacoes />
 
         <View style={styles.secao}>
           <Text style={styles.tituloSecao}>Transações Recentes</Text>
-          {transacoes.map(t => (
-            <ItemTransacao
-              key={t.id}
-              descricao={t.descricao}
-              valor={t.valor}
-              tipo={t.tipo}
-              categoria={t.categoria}
-              data={t.data}
-              // Navega para o detalhe passando a transação inteira via route.params
-              // (a tela DetalheTransacao será criada no Passo 8)
-              onPress={() => navigation.navigate('DetalheTransacao', { transacao: t })}
-            />
-          ))}
+
+          {transacoes.length === 0 ? (
+            <View style={styles.vazio}>
+              <Ionicons name="wallet-outline" size={64} color="#bdc3c7" />
+              <Text style={styles.textoVazio}>Nenhuma transação ainda</Text>
+              <Text style={styles.subtextoVazio}>
+                Toque em "Nova Transação" para começar
+              </Text>
+            </View>
+          ) : (
+            transacoes.map(t => (
+              <ItemTransacao
+                key={t.id}
+                descricao={t.descricao}
+                valor={t.valor}
+                tipo={t.tipo}
+                categoria={t.categoria}
+                data={t.data}
+                // Navega para o detalhe (DetalheTransacaoScreen criada na Aula 4)
+                onPress={() => navigation.navigate('DetalheTransacao', { transacao: t })}
+                onLongPress={() => confirmarExclusao(t.id, t.descricao)}
+              />
+            ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -78,13 +102,20 @@ export function DashboardScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: cores.primaria },
   scroll: { flex: 1, backgroundColor: cores.fundo },
+  centralizador: {
+    flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: cores.fundo,
+  },
+  textoCarregando: { marginTop: 12, color: cores.subtexto, fontSize: 14 },
   cabecalho: {
     backgroundColor: cores.primaria,
     paddingHorizontal: espacamento.md,
     paddingVertical: espacamento.lg,
   },
   titulo: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
-  subtitulo: { color: '#bdc3c7', fontSize: 14, marginTop: 2 },
+  subtitulo: { color: '#bdc3c7', fontSize: 14, marginTop: 2, textTransform: 'capitalize' },
   secao: { padding: espacamento.md },
   tituloSecao: { fontSize: 17, fontWeight: '700', color: cores.texto, marginBottom: espacamento.md },
+  vazio: { alignItems: 'center', paddingVertical: 48, gap: 8 },
+  textoVazio: { fontSize: 17, fontWeight: '600', color: cores.subtexto },
+  subtextoVazio: { fontSize: 13, color: '#bdc3c7', textAlign: 'center' },
 });

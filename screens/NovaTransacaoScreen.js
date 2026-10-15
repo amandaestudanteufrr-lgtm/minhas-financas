@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { cores, espacamento, raio } from '../theme';
+import { useTransacoes } from '../context/TransacoesContext';  // ← NOVO
 
 const CATEGORIAS = [
   { id: 'alimentacao', label: 'Alimentação', icone: 'restaurant' },
@@ -23,45 +24,41 @@ export function NovaTransacaoScreen({ navigation }) {
   const [tipo, setTipo] = useState('despesa');
   const [categoria, setCategoria] = useState('outros');
 
-  const salvar = () => {
-    // Validação básica
+  const { adicionarTransacao } = useTransacoes();  // ← NOVO (dentro do componente)
+
+  // ↓ Função salvar atualizada para usar o contexto
+  const salvar = async () => {
     if (!descricao.trim()) {
-      Alert.alert('Atenção', 'Digite uma descrição para a transação.');
+      Alert.alert('Atenção', 'Digite uma descrição.');
       return;
     }
     const valorNumerico = parseFloat(valor.replace(',', '.'));
     if (!valor || isNaN(valorNumerico) || valorNumerico <= 0) {
-      Alert.alert('Atenção', 'Digite um valor válido maior que zero.');
+      Alert.alert('Atenção', 'Digite um valor válido.');
       return;
     }
 
-    const novaTransacao = {
+    await adicionarTransacao({
       id: Date.now().toString(),
       descricao: descricao.trim(),
       valor: valorNumerico,
       tipo,
       categoria,
       data: new Date().toLocaleDateString('pt-BR'),
-    };
-
-    // Passa a nova transação para o screen DashboardHome (dentro do DashboardStack)
-    navigation.navigate('Dashboard', {
-      screen: 'DashboardHome',
-      params: { novaTransacao },
     });
 
-    // Limpa o formulário
     setDescricao('');
     setValor('');
     setTipo('despesa');
     setCategoria('outros');
+
+    navigation.navigate('Dashboard');
   };
 
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.tituloPagina}>Nova Transação</Text>
 
-      {/* Tipo: Receita ou Despesa */}
       <Text style={styles.label}>Tipo</Text>
       <View style={styles.seletor}>
         {['receita', 'despesa'].map(t => (
@@ -85,7 +82,6 @@ export function NovaTransacaoScreen({ navigation }) {
         ))}
       </View>
 
-      {/* Descrição */}
       <Text style={styles.label}>Descrição</Text>
       <TextInput
         style={styles.input}
@@ -96,7 +92,6 @@ export function NovaTransacaoScreen({ navigation }) {
         returnKeyType="next"
       />
 
-      {/* Valor */}
       <Text style={styles.label}>Valor (R$)</Text>
       <TextInput
         style={styles.input}
@@ -107,7 +102,6 @@ export function NovaTransacaoScreen({ navigation }) {
         returnKeyType="done"
       />
 
-      {/* Categoria */}
       <Text style={styles.label}>Categoria</Text>
       <View style={styles.categorias}>
         {CATEGORIAS.map(cat => (
@@ -134,7 +128,6 @@ export function NovaTransacaoScreen({ navigation }) {
         ))}
       </View>
 
-      {/* Botão Salvar */}
       <TouchableOpacity style={styles.botaoSalvar} onPress={salvar} activeOpacity={0.8}>
         <Ionicons name="checkmark" size={22} color="#fff" />
         <Text style={styles.textoBotao}>Salvar Transação</Text>

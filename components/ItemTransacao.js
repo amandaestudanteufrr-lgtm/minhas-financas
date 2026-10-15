@@ -15,13 +15,18 @@ const ICONES = {
   outros: 'ellipsis-horizontal-circle',
 };
 
-export function ItemTransacao({ descricao, valor, categoria, tipo, data, onPress }) {
+export function ItemTransacao({ descricao, valor, categoria, tipo, data, onPress, onLongPress }) { // ← NOVO: prop onLongPress
   const isReceita = tipo === 'receita';
   const nomeIcone = ICONES[categoria] ?? 'ellipsis-horizontal-circle';
 
+  // Renderiza o item da lista: ícone da categoria, descrição/data e valor formatado
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      {/* Ícone da categoria */}
+    <TouchableOpacity
+      style={styles.container}
+      onPress={onPress}
+      onLongPress={onLongPress}                                                                    // ← NOVO: dispara a exclusão (toque longo)
+      activeOpacity={0.7}
+    >
       <View style={[
         styles.iconeContainer,
         { backgroundColor: isReceita ? cores.receitaFundo : cores.despesaFundo }
@@ -33,13 +38,11 @@ export function ItemTransacao({ descricao, valor, categoria, tipo, data, onPress
         />
       </View>
 
-      {/* Descrição e data */}
       <View style={styles.info}>
         <Text style={styles.descricao} numberOfLines={1}>{descricao}</Text>
         <Text style={styles.data}>{data}</Text>
       </View>
 
-      {/* Valor */}
       <Text style={[styles.valor, { color: isReceita ? cores.receita : cores.despesa }]}>
         {isReceita ? '+' : '-'} R$ {valor.toFixed(2)}
       </Text>

@@ -3,13 +3,12 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cores, espacamento, raio } from '../theme';
+import { useTransacoes } from '../context/TransacoesContext';  // ← NOVO
 
 export function RelatorioScreen() {
-  // Na Aula 5, estes dados virão do Context (AsyncStorage)
-  const receitas = 3700;
-  const despesas = 2206.30;
-  const saldo = receitas - despesas;
-  const total = receitas + despesas;
+  const { receitas, despesas, saldo, transacoes } = useTransacoes();  // ← NOVO
+
+  const total = receitas + despesas || 1;
 
   return (
     <SafeAreaView style={styles.safeArea}>
